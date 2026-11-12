@@ -4,8 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI(title="Workshop API")
 
-# شبیه‌سازی connection pool دیتابیس: فقط ۵ اتصال همزمان
-db_pool = asyncio.Semaphore(5)
+db_pool = asyncio.Semaphore(20)
 
 
 @app.get("/health")
@@ -21,7 +20,6 @@ async def products():
 
 @app.get("/search")
 def search(q: str = "test"):
-    # محاسبه سنگین CPU (شبیه‌سازی جستجوی پیچیده)
     h = q.encode()
     for _ in range(100_000):
         h = hashlib.sha256(h).digest()
@@ -30,7 +28,6 @@ def search(q: str = "test"):
 
 @app.get("/report")
 async def report():
-    # اگر ۲ ثانیه منتظر ماند و اتصال آزاد نشد -> خطا
     try:
         await asyncio.wait_for(db_pool.acquire(), timeout=2)
     except asyncio.TimeoutError:
