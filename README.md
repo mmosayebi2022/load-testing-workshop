@@ -1,40 +1,81 @@
-# Workshop: Load & Stress Testing با k6 و AI
+# Load & Stress Testing Workshop (k6 + AI)
 
-API پایتونی (FastAPI) با چند bottleneck عمدی. با k6 فشار می‌آوریم و نتایج را با AI تحلیل می‌کنیم.
+A small FastAPI service with intentional bottlenecks. You will load-test it
+with k6, analyze the results with an AI assistant, find the bottlenecks,
+fix them, and re-test.
 
-## Endpointها
-| Endpoint | رفتار |
-|----------|-------|
-| /health | فوری، مرجع مقایسه |
-| /products | ۵۰ms تأخیر |
-| /search | محاسبه‌ی سنگین CPU |
-| /report | pool با ۵ اتصال همزمان |
+## Endpoints
 
-## نصب (Ubuntu)
+| Endpoint    | Behavior                                   |
+|-------------|--------------------------------------------|
+| `/health`   | Returns immediately (baseline)             |
+| `/products` | 50 ms simulated query                      |
+| `/search`   | CPU-heavy computation (100k SHA-256 rounds)|
+| `/report`   | DB connection pool limited to 5            |
+
+## Requirements
+
+- Ubuntu (tested on a VMware VM)
+- Python 3.10+
+- k6 ([install guide](https://grafana.com/docs/k6/latest/set-up/install-k6/))
+- An AI assistant (Claude, ChatGPT, ...)
+
+## Setup
+
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git curl gpg
-git clone <آدرس ریپو>
+git clone https://github.com/USERNAME/load-testing-workshop.git
 cd load-testing-workshop
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+k6 version
 ```
-نصب k6: https://grafana.com/docs/k6/latest/set-up/install-k6/
 
-## اجرا
-ترمینال ۱:
+## Run the API
+
+Terminal 1:
+
 ```bash
+source venv/bin/activate
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
-ترمینال ۲:
+
+Quick check (Terminal 2):
+
 ```bash
-k6 run k6/smoke.js    # اول smoke
-k6 run k6/load.js     # بعد load
-k6 run k6/stress.js   # بعد stress
+curl http://localhost:8000/health
 ```
 
-## ساختار
-- `main.py`: API (نسخه‌ی شروع)
-- `k6/`: اسکریپت‌های تست
-- `solution/`: نسخه‌ی اصلاح‌شده (قبل از تمرین نگاه نکنید)
+## Run the tests
+
+Always run them in this order:
+
+```bash
+k6 run k6/smoke.js    # 1 VU, 10 s: does everything work?
+k6 run k6/load.js     # up to 20 VUs, about 2 min: normal traffic
+k6 run k6/stress.js   # up to 200 VUs, about 3 min: find the breaking point
+```
+
+## Project structure
+
+```
+main.py            API (starting version, with bottlenecks)
+k6/                k6 test scripts (smoke, load, stress)
+solution/          Fixed API version (do not open before the exercise)
+WORKSHEET.md       Exercise sheet
+```
+
+## Fixing the bottlenecks
+
+Change **one thing at a time** and re-run `k6/stress.js`:
+
+1. Connection pool size in `main.py`
+2. Number of uvicorn workers:
+   `uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4`
+
+## Notes
+
+- Run the API and k6 on your own machine, not on a shared server.
+- Results vary between runs. Repeat a test before drawing conclusions.
+- k6 and the API share the same CPU when run on one machine, so results
+  are somewhat pessimistic.
