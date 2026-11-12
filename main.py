@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI(title="Workshop API")
 
-db_pool = asyncio.Semaphore(20)
+db_pool = asyncio.Semaphore(5)
 
 
 @app.get("/health")
